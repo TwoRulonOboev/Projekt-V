@@ -8,8 +8,7 @@
 Установите библиотеки, если он еще не установлен:
 
 ```
-    pip install flask
-    pip install google-generativeai
+    pip install Flask Flask-SQLAlchemy Flask-Bcrypt Flask-Login Flask-Cors psycopg2-binary requests
 ```
  
 ```
