@@ -8,11 +8,11 @@ import Checkbox from '@mui/joy/Checkbox';
 import Divider from '@mui/joy/Divider';
 import FormControl from '@mui/joy/FormControl';
 import FormLabel from '@mui/joy/FormLabel';
-import IconButton, { IconButtonProps } from '@mui/joy/IconButton';
-import Link from '@mui/joy/Link';
 import Input from '@mui/joy/Input';
 import Typography from '@mui/joy/Typography';
 import Stack from '@mui/joy/Stack';
+import IconButton, { IconButtonProps } from '@mui/joy/IconButton';
+import Link from '@mui/joy/Link';
 import DarkModeRoundedIcon from '@mui/icons-material/DarkModeRounded';
 import LightModeRoundedIcon from '@mui/icons-material/LightModeRounded';
 import BadgeRoundedIcon from '@mui/icons-material/BadgeRounded';
@@ -22,6 +22,7 @@ interface FormElements extends HTMLFormControlsCollection {
   email: HTMLInputElement;
   password: HTMLInputElement;
   persistent: HTMLInputElement;
+  nickname?: HTMLInputElement; // Поле для никнейма
 }
 
 interface SignInFormElement extends HTMLFormElement {
@@ -53,6 +54,75 @@ function ColorSchemeToggle(props: IconButtonProps) {
 }
 
 export const Login: React.FC = () => {
+  const [isSignUp, setIsSignUp] = React.useState(false); // Состояние для переключения между формами
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null); // Сообщение об ошибке
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false); // Состояние для проверки успешного входа
+
+  const handleToggle = () => {
+    setIsSignUp((prev) => !prev); // Переключение состояния
+  };
+
+  // Функция для отправки данных на сервер
+  const handleSubmit = async (event: React.FormEvent<SignInFormElement>) => {
+    event.preventDefault();
+    const formElements = event.currentTarget.elements;
+    const data = {
+      nickname: formElements.nickname?.value,
+      email: formElements.email.value,
+      password: formElements.password.value,
+      persistent: formElements.persistent?.checked,
+    };
+
+    const url = isSignUp ? '/api/register' : '/api/login';
+    const requestOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: data.nickname,
+        email: data.email,
+        password: data.password,
+      }),
+    };
+
+    try {
+      const response = await fetch(url, requestOptions);
+      const result = await response.json();
+
+      if (response.ok) {
+        setIsLoggedIn(true); // Устанавливаем успешный вход
+        alert(`Success: ${result.message}`);
+      } else {
+        setErrorMessage(result.message);
+        formElements.email.value = '';
+        formElements.password.value = '';
+        if (formElements.nickname) {
+          formElements.nickname.value = '';
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setErrorMessage('An error occurred. Please try again.');
+    }
+  };
+
+  if (isLoggedIn) {
+    // Отображаем другое окно после успешного входа или регистрации
+    return (
+      <CssVarsProvider defaultMode="dark" disableTransitionOnChange>
+        <CssBaseline />
+        <Box sx={{ padding: 4, textAlign: 'center' }}>
+          <Typography component="h1" level="h2">
+            Welcome to the Dashboard!
+          </Typography>
+          <Typography level="body-md">
+            Вы успешно {isSignUp ? 'зарегистрировались' : 'вошли'} в систему.
+          </Typography>
+          {/* Добавьте сюда больше контента для "другого окна" */}
+        </Box>
+      </CssVarsProvider>
+    );
+  }
+
   return (
     <CssVarsProvider defaultMode="dark" disableTransitionOnChange>
       <CssBaseline />
@@ -131,50 +201,54 @@ export const Login: React.FC = () => {
             <Stack gap={4} sx={{ mb: 2 }}>
               <Stack gap={1}>
                 <Typography component="h1" level="h3">
-                  Вход в аккаунт
+                  {isSignUp ? 'Регистрация' : 'Вход в аккаунт'}
                 </Typography>
                 <Typography level="body-sm">
-                  Нету аккаунта?{' '}
-                  <Link href="#replace-with-a-link" level="title-sm">
-                    Зарегистрируйся!
+                  {isSignUp ? 'Уже есть аккаунт?' : 'Нету аккаунта?'}{' '}
+                  <Link href="#" level="title-sm" onClick={handleToggle}>
+                    {isSignUp ? 'Войдите!' : 'Зарегистрируйтесь!'}
                   </Link>
                 </Typography>
               </Stack>
-              <Button variant="soft" color="neutral" fullWidth startDecorator={<GoogleIcon />}>
-                Вход через Google
-              </Button>
+              {isSignUp && (
+                <Button variant="soft" color="neutral" fullWidth startDecorator={<GoogleIcon />}>
+                  Регистрация через Google
+                </Button>
+              )}
+              {!isSignUp && (
+                <Button variant="soft" color="neutral" fullWidth startDecorator={<GoogleIcon />}>
+                  Вход через Google
+                </Button>
+              )}
             </Stack>
-            <Divider
-              sx={(theme) => ({
-                [theme.getColorSchemeSelector('light')]: {
-                  color: { xs: '#FFF', md: 'text.tertiary' },
-                },
-              })}
-            >
-              or
-            </Divider>
-            <Stack gap={4} sx={{ mt: 2 }}>
-              <form
-                onSubmit={(event: React.FormEvent<SignInFormElement>) => {
-                  event.preventDefault();
-                  const formElements = event.currentTarget.elements;
-                  const data = {
-                    email: formElements.email.value,
-                    password: formElements.password.value,
-                    persistent: formElements.persistent.checked,
-                  };
-                  alert(JSON.stringify(data, null, 2));
-                }}
+            {!isSignUp && (
+              <Divider
+                sx={(theme) => ({
+                  [theme.getColorSchemeSelector('light')]: {
+                    color: { xs: '#FFF', md: 'text.tertiary' },
+                  },
+                })}
               >
+                или
+              </Divider>
+            )}
+            <Stack gap={4} sx={{ mt: 2 }}>
+              <form onSubmit={handleSubmit}>
+                {isSignUp && (
+                  <FormControl required>
+                    <FormLabel>Никнейм</FormLabel>
+                    <Input type="text" name="nickname" />
+                  </FormControl>
+                )}
                 <FormControl required>
                   <FormLabel>Email</FormLabel>
                   <Input type="email" name="email" />
                 </FormControl>
                 <FormControl required>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Пароль</FormLabel>
                   <Input type="password" name="password" />
                 </FormControl>
-                <Stack gap={4} sx={{ mt: 2 }}>
+                {!isSignUp && (
                   <Box
                     sx={{
                       display: 'flex',
@@ -187,10 +261,17 @@ export const Login: React.FC = () => {
                       Забыли пароль?
                     </Link>
                   </Box>
+                )}
+                <Stack gap={4} sx={{ mt: 2 }}>
                   <Button type="submit" fullWidth>
-                    Войти
+                    {isSignUp ? 'Зарегистрироваться' : 'Войти'}
                   </Button>
                 </Stack>
+                {errorMessage && (
+                  <Typography level="body-sm" color="danger" textAlign="center" sx={{ mt: 2 }}>
+                    {errorMessage}
+                  </Typography>
+                )}
               </form>
             </Stack>
           </Box>
